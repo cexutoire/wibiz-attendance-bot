@@ -41,7 +41,7 @@ def get_today_attendance():
 @app.get("/api/attendance/week")
 def get_week_attendance():
     """Get this week's attendance summary"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     pst_now = db.get_current_pst_time()
@@ -73,7 +73,7 @@ def get_week_attendance():
 @app.get("/api/tasks/today")
 def get_today_tasks():
     """Get today's tasks"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     pst_now = db.get_current_pst_time()
@@ -103,7 +103,7 @@ def get_today_tasks():
 @app.get("/api/stats")
 def get_stats():
     """Get overall statistics"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     # Total records

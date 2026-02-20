@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect('attendance.db')
+conn = sqlite3.connect('./data/attendance.db')
 cursor = conn.cursor()
 
 # Clear all data

@@ -8,6 +8,12 @@ from datetime import datetime
 from src.database import AttendanceDB
 from src.utils import calculate_hours, extract_tasks, extract_urls
 import json
+from datetime import datetime, timedelta
+import os
+
+# Project root and mapping path
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NAME_MAPPING_FILE = os.path.join(ROOT_DIR, 'data', 'name_mapping.json')
 
 def get_real_name(user_id, discord_username, message_content):
     """
@@ -23,7 +29,7 @@ def get_real_name(user_id, discord_username, message_content):
     
     # Second, check name mapping file
     try:
-        with open('name_mapping.json', 'r') as f:
+        with open(NAME_MAPPING_FILE, 'r') as f:
             name_map = json.load(f)
             if user_id in name_map:
                 return name_map[user_id]
@@ -35,9 +41,15 @@ def get_real_name(user_id, discord_username, message_content):
 
 
 # Load environment variables
-load_dotenv()
+load_dotenv(os.path.join(os.getcwd(), 'config', '.env'))
 TOKEN = os.getenv('DISCORD_TOKEN')
-CHANNEL_ID = int(os.getenv('CHANNEL_ID'))
+raw_channel_id = os.getenv('CHANNEL_ID')
+
+if not TOKEN or not raw_channel_id:
+    print("❌ ERROR: DISCORD_TOKEN or CHANNEL_ID missing in .env file.")
+    exit(1)
+
+CHANNEL_ID = int(raw_channel_id)
 
 # Initialize database
 db = AttendanceDB()
@@ -178,7 +190,7 @@ async def today(ctx):
 @bot.command()
 async def week(ctx):
     """Show this week's attendance summary"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     from datetime import datetime, timedelta
@@ -215,7 +227,7 @@ async def week(ctx):
 @bot.command()
 async def tasks(ctx, *, query=None):
     """Show tasks (usage: !tasks or !tasks @user or !tasks today)"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     if query and query.lower() == 'today':
@@ -276,7 +288,7 @@ async def tasks(ctx, *, query=None):
 @bot.command()
 async def missing(ctx):
     """Show who hasn't clocked out today"""
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(db.db_file)
     cursor = conn.cursor()
     
     pst_now = db.get_current_pst_time()
@@ -305,7 +317,7 @@ async def missing(ctx):
     @bot.command()
     async def stats(ctx):
         """Show overall system statistics"""
-        conn = sqlite3.connect('attendance.db')
+        conn = sqlite3.connect(db.db_file)
         cursor = conn.cursor()
         
         # Total records
@@ -354,7 +366,7 @@ async def whoami(ctx):
     
     # Check if mapped
     try:
-        with open('name_mapping.json', 'r') as f:
+        with open(NAME_MAPPING_FILE, 'r') as f:
             name_map = json.load(f)
             real_name = name_map.get(user_id, "❌ Not mapped")
     except:

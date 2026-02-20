@@ -1,17 +1,22 @@
 import sqlite3
 from datetime import datetime
 import pytz
+import os
 
 class AttendanceDB:
     def __init__(self, db_file='attendance.db'):
-        self.db_file = db_file
+        # Get the directory where database.py is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Store database in the project root (one level above `src`)
+        project_root = os.path.dirname(current_dir)
+        self.db_file = os.path.join(project_root, db_file)
         self.timezone = pytz.timezone('Asia/Manila')
         self.init_database()
 
     def get_current_pst_time(self):
         """Get current time in PST"""
         utc_now = datetime.now(pytz.utc)
-        pst_now = utc_now.astimezone(self.timezone)
+        pst_now = utc_now.astimezone(self.timezone) 
         return pst_now
 
     def format_time_12hr(self, time_str):
@@ -58,7 +63,7 @@ class AttendanceDB:
 
         conn.commit()
         conn.close()
-        print("✅ Database initialized successfully!")
+        print(f"✅ Database initialized: {self.db_file}")
 
     def save_time_in(self, user_id, name, date, time_in):
         conn = sqlite3.connect(self.db_file)
@@ -98,6 +103,7 @@ class AttendanceDB:
         conn.commit()
         conn.close()
         print(f'💾 Saved: {name} clocked in at {time_in}')
+        print(f'   Database: {self.db_file}')
 
     def save_time_out(self, user_id, name, date, time_in, time_out, hours_worked):
         conn = sqlite3.connect(self.db_file)
