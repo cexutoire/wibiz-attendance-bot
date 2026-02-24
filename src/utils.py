@@ -1,15 +1,16 @@
 from datetime import datetime
 
-def calculate_hours(time_in_str, time_out_str):
+def calculate_hours(time_in_str, time_out_str, deduct_lunch=False):
     """
     Calculate hours worked between time-in and time-out
     
     Args:
         time_in_str: "9:00 AM" format
         time_out_str: "5:30 PM" format
+        deduct_lunch: Whether to deduct 1-hour lunch break (default: False)
     
     Returns:
-        float: hours worked (e.g., 8.5)
+        float: hours worked
     """
     try:
         # Parse time strings

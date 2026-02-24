@@ -9,7 +9,7 @@ app = FastAPI()
 # Allow React frontend to access the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev servers
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,20 +23,38 @@ def root():
 
 @app.get("/api/attendance/today")
 def get_today_attendance():
-    """Get today's attendance records"""
-    records = db.get_today_attendance()
+    """Get today's attendance records with break info"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
     
-    result = []
-    for name, time_in, time_out, hours, status in records:
-        result.append({
+    pst_now = db.get_current_pst_time()
+    today = pst_now.strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT name, time_in, time_out, break_start, break_end, 
+               break_duration, hours_worked, status
+        FROM attendance
+        WHERE date = ?
+        ORDER BY time_in
+    ''', (today,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    data = []
+    for name, time_in, time_out, break_start, break_end, break_duration, hours, status in results:
+        data.append({
             "name": name,
             "time_in": time_in,
             "time_out": time_out,
+            "break_start": break_start,
+            "break_end": break_end,
+            "break_duration": break_duration,
             "hours_worked": hours,
             "status": status
         })
     
-    return {"data": result}
+    return {"data": data}
 
 @app.get("/api/attendance/week")
 def get_week_attendance():
@@ -64,7 +82,7 @@ def get_week_attendance():
     for name, total_hours, days in results:
         data.append({
             "name": name,
-            "total_hours": round(total_hours, 1),
+            "total_hours": round(total_hours, 1) if total_hours else 0,
             "days_worked": days
         })
     
@@ -135,9 +153,17 @@ def get_stats():
     cursor.execute('''
         SELECT COUNT(DISTINCT user_id)
         FROM attendance
-        WHERE date = ? AND status = "clocked_in"
+        WHERE date = ? AND status = 'clocked_in'
     ''', (today.strftime('%Y-%m-%d'),))
     currently_working = cursor.fetchone()[0]
+    
+    # People on break
+    cursor.execute('''
+        SELECT COUNT(DISTINCT user_id)
+        FROM attendance
+        WHERE date = ? AND status = 'on_break'
+    ''', (today.strftime('%Y-%m-%d'),))
+    on_break = cursor.fetchone()[0]
     
     conn.close()
     
@@ -146,7 +172,8 @@ def get_stats():
         "total_tasks": total_tasks,
         "total_hours": round(total_hours, 1),
         "week_hours": round(week_hours, 1),
-        "currently_working": currently_working
+        "currently_working": currently_working,
+        "on_break": on_break
     }
 
 if __name__ == "__main__":
