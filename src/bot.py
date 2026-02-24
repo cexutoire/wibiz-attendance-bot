@@ -66,9 +66,9 @@ TIME_IN_PATTERN = r'Time [Ii]n:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
 TIME_OUT_PATTERN = r'Time [Oo]ut:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
 NAME_PATTERN = r'Name:?\s*([A-Za-z\s]+)'
 DATE_PATTERN = r'Date:?\s*(\d{1,2}\s+\w+\s+\d{4})'
-# Add to existing regex patterns
-BREAK_START_PATTERN = r'[Oo]n [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
-BREAK_END_PATTERN = r'[Bb]ack [Ff]rom [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
+# Add to existing regex patterns (around line 50)
+BREAK_START_PATTERN = r'[Oo]n [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[APap][Mm])'
+BREAK_END_PATTERN = r'[Bb]ack [Ff]rom [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[APap][Mm])'
 
 @bot.event
 async def on_ready():
@@ -97,7 +97,9 @@ async def on_message(message):
     break_start_match = re.search(BREAK_START_PATTERN, content, re.IGNORECASE)
     if break_start_match:
         break_start = break_start_match.group(1).strip()
-        break_start = re.sub(r'\s+', ' ', break_start)
+        # Normalize: convert 'pm' to 'PM', 'am' to 'AM'
+        break_start = re.sub(r'\s+', ' ', break_start)  # Remove extra spaces
+        break_start = break_start.upper()  # Convert to uppercase
         
         success = db.save_break_start(str(message.author.id), name, date, break_start)
         if success:
@@ -108,12 +110,14 @@ async def on_message(message):
         
         await bot.process_commands(message)
         return
-    
+
     # Check for BREAK END
     break_end_match = re.search(BREAK_END_PATTERN, content, re.IGNORECASE)
     if break_end_match:
         break_end = break_end_match.group(1).strip()
+        # Normalize: convert 'pm' to 'PM', 'am' to 'AM'
         break_end = re.sub(r'\s+', ' ', break_end)
+        break_end = break_end.upper()
         
         success = db.save_break_end(str(message.author.id), name, date, break_end)
         if success:
