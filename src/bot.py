@@ -66,6 +66,9 @@ TIME_IN_PATTERN = r'Time [Ii]n:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
 TIME_OUT_PATTERN = r'Time [Oo]ut:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
 NAME_PATTERN = r'Name:?\s*([A-Za-z\s]+)'
 DATE_PATTERN = r'Date:?\s*(\d{1,2}\s+\w+\s+\d{4})'
+# Add to existing regex patterns
+BREAK_START_PATTERN = r'[Oo]n [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
+BREAK_END_PATTERN = r'[Bb]ack [Ff]rom [Bb]reak:?\s*(\d{1,2}:\d{2}\s*[AP]M)'
 
 @bot.event
 async def on_ready():
@@ -86,33 +89,62 @@ async def on_message(message):
     author = message.author.name
     timestamp = message.created_at
     
-    # Check if this is a FULL time-out report (has "Time Out" keyword)
+    # Get real name from mapping
+    name = get_real_name(str(message.author.id), author, content)
+    date = timestamp.strftime('%Y-%m-%d')
+    
+    # Check for BREAK START
+    break_start_match = re.search(BREAK_START_PATTERN, content, re.IGNORECASE)
+    if break_start_match:
+        break_start = break_start_match.group(1).strip()
+        break_start = re.sub(r'\s+', ' ', break_start)
+        
+        success = db.save_break_start(str(message.author.id), name, date, break_start)
+        if success:
+            await message.add_reaction('🍽️')
+            print(f'🍽️  {name} on break at {break_start}')
+        else:
+            await message.add_reaction('❌')
+        
+        await bot.process_commands(message)
+        return
+    
+    # Check for BREAK END
+    break_end_match = re.search(BREAK_END_PATTERN, content, re.IGNORECASE)
+    if break_end_match:
+        break_end = break_end_match.group(1).strip()
+        break_end = re.sub(r'\s+', ' ', break_end)
+        
+        success = db.save_break_end(str(message.author.id), name, date, break_end)
+        if success:
+            await message.add_reaction('✅')
+        else:
+            await message.add_reaction('❌')
+        
+        await bot.process_commands(message)
+        return
+    
+    # Check for TIME OUT (full report)
     time_out_match = re.search(TIME_OUT_PATTERN, content, re.IGNORECASE)
     
     if time_out_match:
-        # This is a FULL REPORT - process time-out ONLY (ignore time-in detection)
+        # ... (your existing time-out code, but don't deduct lunch automatically)
         time_out = time_out_match.group(1).strip()
-        
-        # Look for time-in in the same message
         time_in_match = re.search(TIME_IN_PATTERN, content, re.IGNORECASE)
         
-        # Get real name from mapping (not from message)
-        name = get_real_name(str(message.author.id), author, content)
-        
-        date = timestamp.strftime('%Y-%m-%d')
         time_in = time_in_match.group(1).strip() if time_in_match else None
         
-        # Normalize times (remove extra spaces: "8: 00 AM" -> "8:00 AM")
         if time_in:
             time_in = re.sub(r'\s+', ' ', time_in)
         time_out = re.sub(r'\s+', ' ', time_out)
         
-        # Calculate hours if we have both times
+        # Calculate hours WITHOUT automatic lunch deduction
         hours_worked = 0.0
         if time_in and time_out:
-            hours_worked = calculate_hours(time_in, time_out)
+            from src.utils import calculate_hours
+            hours_worked = calculate_hours(time_in, time_out, deduct_lunch=False)  # NO auto-deduction
         
-        # Save time-out to database
+        # Save time-out (will deduct break if logged)
         db.save_time_out(str(message.author.id), name, date, time_in, time_out, hours_worked)
         
         # Extract tasks
@@ -126,7 +158,7 @@ async def on_message(message):
         print(f'   ⏱️  Hours: {hours_worked} hrs')
         print(f'   📝 Tasks: {len(tasks)}')
         
-        # Save each task
+        # Save tasks
         for i, task in enumerate(tasks):
             task_url = None
             if urls and i < len(urls):
@@ -139,19 +171,12 @@ async def on_message(message):
         await message.add_reaction('📝')
         
     else:
-        # NO "Time Out" found, so check for standalone time-in
+        # Check for TIME IN
         time_in_match = re.search(TIME_IN_PATTERN, content, re.IGNORECASE)
         if time_in_match:
             time_in = time_in_match.group(1).strip()
-            date = timestamp.strftime('%Y-%m-%d')
-            
-            # Normalize time (remove extra spaces)
             time_in = re.sub(r'\s+', ' ', time_in)
             
-            # Get real name from mapping (not from message)
-            name = get_real_name(str(message.author.id), author, content)
-            
-            # Save to database
             db.save_time_in(str(message.author.id), name, date, time_in)
             
             print(f'💾 Saved: {name} clocked in at {time_in}')
@@ -379,5 +404,39 @@ Mapped Name: `{real_name}`
 
 *To update your name, ask admin to add you to name_mapping.json*
 """)
+    
+@bot.command()
+async def status(ctx):
+    """Show everyone's current status"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    pst_now = db.get_current_pst_time()
+    today = pst_now.strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT name, time_in, status, break_start
+        FROM attendance
+        WHERE date = ?
+        ORDER BY time_in
+    ''', (today,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    if not results:
+        await ctx.send("📭 No one has clocked in today yet.")
+        return
+    
+    response = "📊 **Current Status:**\n\n"
+    for name, time_in, status, break_start in results:
+        if status == 'clocked_in':
+            response += f"✅ {name}: Working (since {time_in})\n"
+        elif status == 'on_break':
+            response += f"🍽️ {name}: On break (since {break_start})\n"
+        elif status == 'complete':
+            response += f"✔️ {name}: Completed for the day\n"
+    
+    await ctx.send(response)
 
 bot.run(TOKEN)
