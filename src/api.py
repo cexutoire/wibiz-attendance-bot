@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.database import AttendanceDB
 import sqlite3
 from datetime import datetime, timedelta
+import json
+import os
 
 app = FastAPI()
 
-# Allow React frontend to access the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -16,6 +17,19 @@ app.add_middleware(
 )
 
 db = AttendanceDB()
+
+# Load staff registry
+STAFF_REGISTRY_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'staff_registry.json')
+
+def load_staff_registry():
+    """Load staff registry from JSON file"""
+    try:
+        with open(STAFF_REGISTRY_PATH, 'r') as f:
+            data = json.load(f)
+            return data['staff']
+    except FileNotFoundError:
+        print("⚠️  Staff registry not found")
+        return []
 
 @app.get("/")
 def root():
@@ -52,6 +66,178 @@ def get_today_attendance():
             "break_duration": break_duration,
             "hours_worked": hours,
             "status": status
+        })
+    
+    return {"data": data}
+
+@app.get("/api/attendance/count")
+def get_attendance_count():
+    """Get count of present vs absent staff today"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    pst_now = db.get_current_pst_time()
+    today = pst_now.strftime('%Y-%m-%d')
+    
+    # Get all staff who logged in today
+    cursor.execute('''
+        SELECT DISTINCT user_id, name
+        FROM attendance
+        WHERE date = ?
+    ''', (today,))
+    
+    present_staff = cursor.fetchall()
+    conn.close()
+    
+    # Load staff registry
+    all_staff = load_staff_registry()
+    active_staff = [s for s in all_staff if s['active']]
+    
+    # Determine who is present and who is absent
+    present_ids = {staff[0] for staff in present_staff}
+    
+    present = []
+    absent = []
+    
+    for staff in active_staff:
+        if staff['user_id'] in present_ids:
+            present.append({
+                "name": staff['name'],
+                "role": staff['role']
+            })
+        else:
+            absent.append({
+                "name": staff['name'],
+                "role": staff['role']
+            })
+    
+    return {
+        "date": today,
+        "total_staff": len(active_staff),
+        "present_count": len(present),
+        "absent_count": len(absent),
+        "present": present,
+        "absent": absent
+    }
+
+@app.get("/api/attendance/summary/daily")
+def get_daily_summary():
+    """Get daily summary for the past 30 days"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    pst_now = db.get_current_pst_time()
+    thirty_days_ago = (pst_now - timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT 
+            date,
+            COUNT(DISTINCT user_id) as staff_count,
+            SUM(hours_worked) as total_hours,
+            COUNT(CASE WHEN status = 'complete' THEN 1 END) as completed,
+            COUNT(CASE WHEN status = 'clocked_in' THEN 1 END) as still_working
+        FROM attendance
+        WHERE date >= ?
+        GROUP BY date
+        ORDER BY date DESC
+    ''', (thirty_days_ago,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    data = []
+    for date, staff_count, total_hours, completed, still_working in results:
+        data.append({
+            "date": date,
+            "staff_count": staff_count,
+            "total_hours": round(total_hours, 1) if total_hours else 0,
+            "completed": completed,
+            "still_working": still_working
+        })
+    
+    return {"data": data}
+
+@app.get("/api/attendance/summary/weekly")
+def get_weekly_summary():
+    """Get weekly summary for the past 12 weeks"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    pst_now = db.get_current_pst_time()
+    twelve_weeks_ago = (pst_now - timedelta(weeks=12)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT 
+            strftime('%Y-W%W', date) as week,
+            MIN(date) as week_start,
+            MAX(date) as week_end,
+            COUNT(DISTINCT user_id) as unique_staff,
+            COUNT(DISTINCT date || user_id) as total_days_worked,
+            SUM(hours_worked) as total_hours,
+            AVG(hours_worked) as avg_hours_per_day
+        FROM attendance
+        WHERE date >= ? AND status = 'complete'
+        GROUP BY strftime('%Y-W%W', date)
+        ORDER BY week DESC
+    ''', (twelve_weeks_ago,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    data = []
+    for week, week_start, week_end, unique_staff, days_worked, total_hours, avg_hours in results:
+        data.append({
+            "week": week,
+            "week_start": week_start,
+            "week_end": week_end,
+            "unique_staff": unique_staff,
+            "days_worked": days_worked,
+            "total_hours": round(total_hours, 1) if total_hours else 0,
+            "avg_hours_per_day": round(avg_hours, 1) if avg_hours else 0
+        })
+    
+    return {"data": data}
+
+@app.get("/api/attendance/summary/monthly")
+def get_monthly_summary():
+    """Get monthly summary for the past 12 months"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    pst_now = db.get_current_pst_time()
+    twelve_months_ago = (pst_now - timedelta(days=365)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT 
+            strftime('%Y-%m', date) as month,
+            COUNT(DISTINCT user_id) as unique_staff,
+            COUNT(DISTINCT date || user_id) as total_days_worked,
+            SUM(hours_worked) as total_hours,
+            AVG(hours_worked) as avg_hours_per_day,
+            SUM(break_duration) as total_break_hours
+        FROM attendance
+        WHERE date >= ? AND status = 'complete'
+        GROUP BY strftime('%Y-%m', date)
+        ORDER BY month DESC
+    ''', (twelve_months_ago,))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    data = []
+    for month, unique_staff, days_worked, total_hours, avg_hours, break_hours in results:
+        # Convert YYYY-MM to readable format
+        date_obj = datetime.strptime(month, '%Y-%m')
+        month_name = date_obj.strftime('%B %Y')
+        
+        data.append({
+            "month": month,
+            "month_name": month_name,
+            "unique_staff": unique_staff,
+            "days_worked": days_worked,
+            "total_hours": round(total_hours, 1) if total_hours else 0,
+            "avg_hours_per_day": round(avg_hours, 1) if avg_hours else 0,
+            "total_break_hours": round(break_hours, 1) if break_hours else 0
         })
     
     return {"data": data}

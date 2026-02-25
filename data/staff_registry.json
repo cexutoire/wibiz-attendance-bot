@@ -1,0 +1,22 @@
+{
+  "staff": [
+    {
+      "user_id": "1468793551751090451",
+      "name": "Bea Chrizel",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "901802935162384385",
+      "name": "Blessie",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1468627304996536421",
+      "name": "Marinelle",
+      "role": "Intern",
+      "active": true
+    }
+  ]
+}
