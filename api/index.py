@@ -4,7 +4,10 @@ from src.database import AttendanceDB
 import sqlite3
 from datetime import datetime, timedelta
 import json
+import sys
 import os
+# This adds the root directory to the search path
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 app = FastAPI()
 
