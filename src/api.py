@@ -5,16 +5,34 @@ import sqlite3
 from datetime import datetime, timedelta
 import json
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
+<<<<<<< HEAD
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://db-attendance-and-task-tracking.vercel.app",
+        # Add your actual frontend URL here if it's different from the backend one
+    ],
+=======
     allow_origins=["*"],  # updated to allow all origins for Vercel
+>>>>>>> dcea5b3d13a3071a0ba097f6c7dc52c390c84619
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:3000", "http://localhost:5173"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 db = AttendanceDB()
 
