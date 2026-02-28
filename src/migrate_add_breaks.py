@@ -4,7 +4,7 @@ import os
 # Get database path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
-db_path = os.path.join(project_root, 'data', 'attendance.db')
+db_path = os.path.join(project_root, 'attendance.db')
 
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()

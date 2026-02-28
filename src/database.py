@@ -5,12 +5,16 @@ import os
 
 class AttendanceDB:
     def __init__(self, db_file='attendance.db'):
-        # Get the directory where database.py is located
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Store database in the project root (one level above `src`)
         project_root = os.path.dirname(current_dir)
-        self.db_file = os.path.join(project_root, db_file)
-        self.timezone = pytz.timezone('Asia/Manila') 
+        
+        # Use /tmp on serverless environments (Vercel)
+        if not os.access(project_root, os.W_OK):
+            self.db_file = os.path.join('/tmp', db_file)
+        else:
+            self.db_file = os.path.join(project_root, db_file)
+        
+        self.timezone = pytz.timezone('Asia/Manila')
         self.init_database()
 
     def get_current_pst_time(self):
