@@ -1,4 +1,6 @@
 fastapi
 uvicorn
-pytz
+discord.py
+python-dotenv
 psycopg2-binary
+pytz
