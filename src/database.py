@@ -158,18 +158,7 @@ class AttendanceDB:
         pst_now = self.get_current_pst_time()
         created_at = pst_now.strftime('%Y-%m-%d %I:%M:%S %p')
 
-        cursor.execute(self._fix_sql('''
-            DELETE FROM attendance
-            WHERE user_id = ? AND date = ? AND status IN ('clocked_in', 'on_break')
-        '''), (user_id, date))
-
-        cursor.execute(self._fix_sql('''
-            SELECT id FROM attendance
-            WHERE user_id = ? AND date = ? AND status = 'complete'
-        '''), (user_id, date))
-
-        existing_record = cursor.fetchone()
-
+        # ✅ STEP 1: Read break_duration BEFORE deleting anything
         cursor.execute(self._fix_sql('''
             SELECT break_duration FROM attendance
             WHERE user_id = ? AND date = ? AND break_duration > 0
@@ -180,7 +169,22 @@ class AttendanceDB:
         break_record = cursor.fetchone()
         break_duration = break_record[0] if break_record else 0
 
-        net_hours = hours_worked - break_duration
+        # ✅ STEP 2: NOW safe to delete the clocked_in/on_break record
+        cursor.execute(self._fix_sql('''
+            DELETE FROM attendance
+            WHERE user_id = ? AND date = ? AND status IN ('clocked_in', 'on_break')
+        '''), (user_id, date))
+
+        # ✅ STEP 3: Calculate net hours after deducting break
+        net_hours = round(hours_worked - break_duration, 2)
+
+        # Check for existing complete record
+        cursor.execute(self._fix_sql('''
+            SELECT id FROM attendance
+            WHERE user_id = ? AND date = ? AND status = 'complete'
+        '''), (user_id, date))
+
+        existing_record = cursor.fetchone()
 
         if existing_record:
             cursor.execute(self._fix_sql('''
@@ -199,7 +203,9 @@ class AttendanceDB:
         conn.close()
 
         if break_duration > 0:
-            print(f'🍽️  Break time deducted: {break_duration:.2f} hrs')
+            print(f'🍽️  Break deducted: {break_duration:.2f} hrs → Net hours: {net_hours:.2f} hrs')
+        else:
+            print(f'ℹ️  No break recorded for {name}')
 
     # ─── Save task ─────────────────────────────────────────────────────────────
 
