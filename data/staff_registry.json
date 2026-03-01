@@ -1,6 +1,36 @@
 {
   "staff": [
     {
+      "user_id": "1450101062403887155",
+      "name": "Leen",
+      "role": "Web Developer",
+      "active": true
+    },
+    {
+      "user_id": "1465987496843415779",
+      "name": "Chielo",
+      "role": "Administrator",
+      "active": true
+    },
+    {
+      "user_id": "891891037377818624",
+      "name": "Arly",
+      "role": "Video Editor",
+      "active": true
+    },
+    {
+      "user_id": "1185599487490654328",
+      "name": "Nick Van",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1345977346242641983",
+      "name": "Ryan",
+      "role": "Web Developer",
+      "active": true
+    },
+    {
       "user_id": "1468793551751090451",
       "name": "Bea Chrizel",
       "role": "Intern",
@@ -21,6 +51,60 @@
         {
       "user_id": "1175098443581095949",
       "name": "Dhanna",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1173822881831075840",
+      "name": "Abdul",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "869511462039715860",
+      "name": "Mark",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1021928630768648243",
+      "name": "Amor",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1468799596988989533",
+      "name": "Kylie",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1389298946165444701",
+      "name": "Ronello",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1116015401877372938",
+      "name": "Brixsonn",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "870854096951848990",
+      "name": "Caila",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "1468793625185095775",
+      "name": "Nan Fritzie",
+      "role": "Intern",
+      "active": true
+    },
+    {
+      "user_id": "845800363176755240",
+      "name": "AJ",
       "role": "Intern",
       "active": true
     }
