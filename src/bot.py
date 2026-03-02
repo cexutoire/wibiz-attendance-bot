@@ -343,49 +343,49 @@ async def missing(ctx):
     
     await ctx.send(response)
 
-    @bot.command()
-    async def stats(ctx):
-        """Show overall system statistics"""
-        conn = sqlite3.connect(db.db_file)
-        cursor = conn.cursor()
-        
-        # Total records
-        cursor.execute('SELECT COUNT(*) FROM attendance')
-        total_attendance = cursor.fetchone()[0]
-        
-        # Total tasks
-        cursor.execute('SELECT COUNT(*) FROM tasks')
-        total_tasks = cursor.fetchone()[0]
-        
-        # Total hours (all time)
-        cursor.execute('SELECT SUM(hours_worked) FROM attendance WHERE status = "complete"')
-        total_hours = cursor.fetchone()[0] or 0
-        
-        # This week's hours
-        from datetime import datetime, timedelta
-        pst_now = db.get_current_pst_time()
-        today = pst_now.date()
-        days_since_monday = today.weekday()
-        monday = today - timedelta(days=days_since_monday)
-        
-        cursor.execute('''
-            SELECT SUM(hours_worked)
-            FROM attendance
-            WHERE date >= ? AND status = "complete"
-        ''', (monday.strftime('%Y-%m-%d'),))
-        week_hours = cursor.fetchone()[0] or 0
-        
-        conn.close()
-        
-        response = f"""📊 **System Statistics:**
+@bot.command()
+async def stats(ctx):
+    """Show overall system statistics"""
+    conn = sqlite3.connect(db.db_file)
+    cursor = conn.cursor()
+    
+    # Total records
+    cursor.execute('SELECT COUNT(*) FROM attendance')
+    total_attendance = cursor.fetchone()[0]
+    
+    # Total tasks
+    cursor.execute('SELECT COUNT(*) FROM tasks')
+    total_tasks = cursor.fetchone()[0]
+    
+    # Total hours (all time)
+    cursor.execute('SELECT SUM(hours_worked) FROM attendance WHERE status = "complete"')
+    total_hours = cursor.fetchone()[0] or 0
+    
+    # This week's hours
+    from datetime import datetime, timedelta
+    pst_now = db.get_current_pst_time()
+    today = pst_now.date()
+    days_since_monday = today.weekday()
+    monday = today - timedelta(days=days_since_monday)
+    
+    cursor.execute('''
+        SELECT SUM(hours_worked)
+        FROM attendance
+        WHERE date >= ? AND status = "complete"
+    ''', (monday.strftime('%Y-%m-%d'),))
+    week_hours = cursor.fetchone()[0] or 0
+    
+    conn.close()
+    
+    response = f"""📊 **System Statistics:**
 
     Total Attendance Records: {total_attendance}
     Total Tasks Logged: {total_tasks}
     Total Hours Tracked: {total_hours:.1f} hrs
     This Week's Hours: {week_hours:.1f} hrs
     """
-        
-        await ctx.send(response)
+    
+    await ctx.send(response)
 
 @bot.command()
 async def whoami(ctx):
@@ -402,12 +402,12 @@ async def whoami(ctx):
         real_name = "❌ Not mapped"
     
     await ctx.send(f"""📋 **Your Info:**
-Discord Username: `{discord_name}`
-User ID: `{user_id}`
-Mapped Name: `{real_name}`
+    Discord Username: `{discord_name}`
+    User ID: `{user_id}`
+    Mapped Name: `{real_name}`
 
-*To update your name, ask admin to add you to name_mapping.json*
-""")
+    *To update your name, ask admin to add you to name_mapping.json*
+    """)
     
 @bot.command()
 async def status(ctx):

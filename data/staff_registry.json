@@ -21,13 +21,19 @@
     {
       "user_id": "1185599487490654328",
       "name": "Nick Van",
-      "role": "Intern",
+      "role": "Graphics",
       "active": true
     },
     {
       "user_id": "1345977346242641983",
       "name": "Ryan",
       "role": "Web Developer",
+      "active": true
+    },
+    {
+      "user_id": "1011628689198432287",
+      "name": "Test",
+      "role": "Intern",
       "active": true
     },
     {
