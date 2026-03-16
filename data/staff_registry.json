@@ -25,18 +25,6 @@
       "active": true
     },
     {
-      "user_id": "1345977346242641983",
-      "name": "Ryan",
-      "role": "Web Developer",
-      "active": true
-    },
-    {
-      "user_id": "1011628689198432287",
-      "name": "Test",
-      "role": "Intern",
-      "active": true
-    },
-    {
       "user_id": "1468793551751090451",
       "name": "Bea Chrizel",
       "role": "Intern",
@@ -57,18 +45,6 @@
         {
       "user_id": "1175098443581095949",
       "name": "Dhanna",
-      "role": "Intern",
-      "active": true
-    },
-    {
-      "user_id": "1173822881831075840",
-      "name": "Abdul",
-      "role": "Intern",
-      "active": true
-    },
-    {
-      "user_id": "869511462039715860",
-      "name": "Mark",
       "role": "Intern",
       "active": true
     },
